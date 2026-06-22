@@ -5,7 +5,7 @@ token price monitoring, multi-source scanning.
 Run: python server.py
 """
 
-import json, os, datetime, sqlite3, urllib.request, threading, time, webbrowser
+import json, os, datetime, sqlite3, urllib.request, threading, time, webbrowser, xml.etree.ElementTree as ET
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 
@@ -40,6 +40,16 @@ RPC_ENDPOINTS = [
 LLAMA_CHAIN_DETAIL = "https://api.llama.fi/v2/chains"
 COINGECKO_SEARCH = "https://api.coingecko.com/api/v3/search?query="
 COINGECKO_PRICE = "https://api.coingecko.com/api/v3/simple/price?ids={ids}&vs_currencies=usd&include_24hr_change=true"
+
+# Crypto news RSS feeds (free, no API key)
+NEWS_FEEDS = [
+    {"name":"CoinDesk","url":"https://www.coindesk.com/arc/outboundfeeds/news-rss/"},
+    {"name":"Cointelegraph","url":"https://cointelegraph.com/rss"},
+    {"name":"Decrypt","url":"https://decrypt.co/feed"},
+    {"name":"The Block","url":"https://www.theblock.co/rss.xml"},
+    {"name":"Bitcoin.com","url":"https://news.bitcoin.com/feed/"},
+]
+NEWS_CACHE = {"items": [], "updated": 0}
 
 # Active testnets — strong airdrop signals
 TESTNETS = [
@@ -284,6 +294,71 @@ def get_gas_prices():
         "estimated_cost_bridge": 0.006,
         "eth_price": None,
     }
+
+
+# ----- News Aggregator -----
+def fetch_news():
+    """Fetch crypto news from RSS feeds with caching (15 min)."""
+    global NEWS_CACHE
+    now = time.time()
+    if now - NEWS_CACHE["updated"] < 900 and NEWS_CACHE["items"]:
+        return {"items": NEWS_CACHE["items"], "cached": True}
+
+    items = []
+    for feed in NEWS_FEEDS:
+        try:
+            req = urllib.request.Request(feed["url"], headers={"User-Agent": "Mozilla/5.0"})
+            resp = urllib.request.urlopen(req, timeout=10)
+            tree = ET.parse(resp)
+            root = tree.getroot()
+            
+            # RSS 2.0 format
+            for item_elem in root.iter("item"):
+                title = ""
+                link = ""
+                desc = ""
+                pubdate = ""
+                for child in item_elem:
+                    if child.tag == "title": title = (child.text or "")[:200]
+                    elif child.tag == "link": link = child.text or ""
+                    elif child.tag == "description": desc = (child.text or "")[:300]
+                    elif child.tag == "pubDate": pubdate = child.text or ""
+                if title:
+                    items.append({
+                        "title": title,
+                        "link": link,
+                        "description": desc,
+                        "date": pubdate,
+                        "source": feed["name"],
+                    })
+            # Atom format fallback
+            for entry in root.iter("{http://www.w3.org/2005/Atom}entry"):
+                title = ""
+                link = ""
+                summary = ""
+                updated = ""
+                for child in entry:
+                    tag = child.tag.split("}")[-1] if "}" in child.tag else child.tag
+                    if tag == "title": title = (child.text or "")[:200]
+                    elif tag == "link" and child.get("href"): link = child.get("href", "")
+                    elif tag == "summary": summary = (child.text or "")[:300]
+                    elif tag == "updated": updated = child.text or ""
+                if title and not any(i["title"] == title for i in items):
+                    items.append({
+                        "title": title, "link": link,
+                        "description": summary, "date": updated,
+                        "source": feed["name"],
+                    })
+        except Exception as e:
+            items.append({
+                "title": f"Feed unavailable: {feed['name']}",
+                "link": "", "description": str(e)[:100],
+                "date": "", "source": feed["name"],
+            })
+
+    items.sort(key=lambda x: x["date"], reverse=True)
+    NEWS_CACHE = {"items": items[:50], "updated": now}
+    return {"items": items[:50], "cached": False}
 
 # ----- Wallet Scanner -----
 def scan_wallet():
@@ -706,6 +781,10 @@ class APIHandler(BaseHTTPRequestHandler):
                 "costs": [dict(r) for r in cost_rows],
                 "claims": [dict(r) for r in claimed_rows],
             }, ensure_ascii=False).encode())
+
+        elif path == "/api/news":
+            result = fetch_news()
+            self.wfile.write(json.dumps(result, ensure_ascii=False).encode())
 
         elif path == "/api/gas":
             result = get_gas_prices()
