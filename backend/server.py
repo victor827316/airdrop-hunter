@@ -182,6 +182,31 @@ def init_db():
 
 init_db()
 
+# Seed known airdrop opportunities
+def _seed_airdrop_intel():
+    conn = get_db()
+    count = conn.execute("SELECT COUNT(*) FROM airdrop_events").fetchone()[0]
+    if count == 0:
+        events = [
+            ("Scroll","SCR","Scroll 主网空投","upcoming","","500", "community","L2 生态，交互桥接+DEX 可获资格"),
+            ("Linea","LINEA","Linea 空投","upcoming","","300", "community","Consensys 支持，桥接+Swap+NFT"),
+            ("Base","","Base 生态激励","live","","200", "official","Coinbase L2，持续生态激励"),
+            ("zkSync","ZK","zkSync 空投","ended","","800", "community","已完成，可参考交互模式"),
+            ("Starknet","STRK","Starknet 空投","ended","","600", "community","已完成，参考交互路径"),
+            ("LayerZero","ZRO","LayerZero 空投","ended","","1000", "community","跨链协议，已完成"),
+            ("Arbitrum","ARB","Arbitrum 空投","ended","","1200", "community","已完成，经典案例"),
+            ("Aptos","APT","Aptos 空投","ended","","900", "community","已完成，Move 生态"),
+        ]
+        conn.executemany(
+            "INSERT INTO airdrop_events (chain_name,token,title,status,estimated_date,value_usd,source,notes) VALUES (?,?,?,?,?,?,?,?)",
+            events
+        )
+        conn.commit()
+    conn.close()
+
+_seed_airdrop_intel()
+
+
 # ----- Price Cache -----
 _price_cache = {}
 _price_lock = threading.Lock()
@@ -252,49 +277,71 @@ def _update_prices():
 
 # ----- Gas Tracker -----
 def get_gas_prices():
-    """Fetch current gas prices for cost optimization."""
+    """Fetch gas prices from multiple sources with fallback."""
+    # Try Etherscan
     try:
-        # Etherscan gas oracle (free, no key needed for basic)
         req = urllib.request.Request(
             "https://api.etherscan.io/api?module=gastracker&action=gasoracle",
             headers={"User-Agent": "Mozilla/5.0"}
         )
-        data = json.loads(urllib.request.urlopen(req, timeout=8).read())
+        data = json.loads(urllib.request.urlopen(req, timeout=6).read())
         if data.get("status") == "1":
-            result = data["result"]
-            safe = int(result.get("SafeGasPrice", 0))
-            propose = int(result.get("ProposeGasPrice", 0))
-            fast = int(result.get("FastGasPrice", 0))
-            base = float(result.get("suggestBaseFee", 0))
+            r = data["result"]
             return {
                 "source": "Etherscan",
-                "safe_gwei": safe,
-                "standard_gwei": propose,
-                "fast_gwei": fast,
-                "base_fee_gwei": base,
-                "recommendation": "safe" if safe < 15 else "standard" if propose < 25 else "wait",
-                "optimal_time": "周末凌晨 (UTC 18:00-22:00)" if propose > 20 else "随时",
-                "estimated_cost_swap": round(propose * 200000 / 1e9, 4),
-                "estimated_cost_bridge": round(propose * 400000 / 1e9, 4),
-                "eth_price": None,
+                "safe_gwei": int(r.get("SafeGasPrice", 15)),
+                "standard_gwei": int(r.get("ProposeGasPrice", 20)),
+                "fast_gwei": int(r.get("FastGasPrice", 30)),
+                "base_fee_gwei": float(r.get("suggestBaseFee", 10)),
+                "recommendation": "safe" if int(r.get("SafeGasPrice",15)) < 12 else "standard" if int(r.get("ProposeGasPrice",20)) < 20 else "wait",
+                "optimal_time": "平日 UTC 14:00-22:00 (亚洲凌晨)",
+                "estimated_cost_swap": round(int(r.get("ProposeGasPrice",20)) * 200000 / 1e9, 4),
+                "estimated_cost_bridge": round(int(r.get("ProposeGasPrice",20)) * 400000 / 1e9, 4),
             }
-    except:
-        pass
-    
-    # Fallback: rough estimate
-    return {
-        "source": "estimated",
-        "safe_gwei": 10,
-        "standard_gwei": 15,
-        "fast_gwei": 25,
-        "base_fee_gwei": 8,
-        "recommendation": "standard",
-        "optimal_time": "不确定",
-        "estimated_cost_swap": 0.003,
-        "estimated_cost_bridge": 0.006,
-        "eth_price": None,
-    }
+    except: pass
 
+    # Try BscScan for BSC gas
+    try:
+        req = urllib.request.Request(
+            "https://api.bscscan.com/api?module=gastracker&action=gasoracle",
+            headers={"User-Agent": "Mozilla/5.0"}
+        )
+        data = json.loads(urllib.request.urlopen(req, timeout=6).read())
+        if data.get("status") == "1":
+            r = data["result"]
+            return {
+                "source": "BscScan",
+                "safe_gwei": int(r.get("SafeGasPrice", 3)),
+                "standard_gwei": int(r.get("ProposeGasPrice", 5)),
+                "fast_gwei": int(r.get("FastGasPrice", 10)),
+                "base_fee_gwei": float(r.get("suggestBaseFee", 1)),
+                "recommendation": "safe",
+                "optimal_time": "BSC Gas 常年便宜",
+                "estimated_cost_swap": round(int(r.get("ProposeGasPrice",5)) * 200000 / 1e9, 6),
+                "estimated_cost_bridge": round(int(r.get("ProposeGasPrice",5)) * 400000 / 1e9, 6),
+            }
+    except: pass
+
+    # Smart fallback with time-based heuristics
+    hour = datetime.datetime.now().hour
+    if hour >= 14 and hour <= 22:
+        base = 15; rec = "standard"
+    elif hour >= 2 and hour <= 8:
+        base = 8; rec = "safe"
+    else:
+        base = 12; rec = "standard"
+
+    return {
+        "source": "heuristic",
+        "safe_gwei": max(base-5, 3),
+        "standard_gwei": base,
+        "fast_gwei": base + 10,
+        "base_fee_gwei": max(base-7, 2),
+        "recommendation": rec,
+        "optimal_time": "周末 10:00-14:00 UTC (亚洲傍晚)",
+        "estimated_cost_swap": round(base * 200000 / 1e9, 4),
+        "estimated_cost_bridge": round(base * 400000 / 1e9, 4),
+    }
 
 # ----- News Aggregator -----
 def fetch_news():
