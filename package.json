@@ -1,0 +1,14 @@
+{
+  "name": "airdrop-hunter",
+  "version": "1.0.0",
+  "description": "Airdrop Hunter - Chain Discovery & Airdrop Tracker",
+  "main": "index.js",
+  "scripts": {
+    "build": "echo done"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.6.7",
+    "@capacitor/cli": "^7.0.0",
+    "@capacitor/core": "^7.0.0"
+  }
+}

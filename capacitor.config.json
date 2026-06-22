@@ -1,0 +1,8 @@
+{
+  "appId": "com.airdrop.hunter",
+  "appName": "Airdrop Hunter",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}
