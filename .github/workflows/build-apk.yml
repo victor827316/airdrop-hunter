@@ -28,10 +28,22 @@ jobs:
       - name: Build web assets
         run: npx cap sync android
 
+      - name: Setup Android SDK
+        run: |
+          ANDROID_SDK_ROOT=/usr/local/lib/android/sdk
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+          echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
+          # Diagnostics
+          echo "=== SDK contents ==="
+          ls $ANDROID_SDK_ROOT/platforms/ 2>/dev/null || echo "no platforms"
+          ls $ANDROID_SDK_ROOT/build-tools/ 2>/dev/null || echo "no build-tools"
+          # Accept licenses
+          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses 2>/dev/null || true
+          # Install SDK 34 if missing
+          $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0" 2>/dev/null || echo "sdkmanager skipped"
+
       - name: Build APK
-        env:
-          ANDROID_HOME: /usr/local/lib/android/sdk
-          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
         run: |
           chmod +x android/gradlew
           cd android && ./gradlew assembleDebug --no-daemon --stacktrace
