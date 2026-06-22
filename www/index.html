@@ -100,11 +100,13 @@ tr:hover{background:#1a1d2e}
   <button data-tab=chains>🔗 链管理</button>
   <button data-tab=airdrops>🎁 空投</button>
   <button data-tab=prices>💹 价格</button>
+  <button data-tab=testnets>🧪 测试网</button>
 </nav>
 
 <main>
   <!-- Dashboard -->
   <section class=active id=sec-dashboard>
+<div style=margin-bottom:12px><button onclick="enableNotifications()" style="background:#2a2d3e;color:#ccc;border:1px solid #3a3d5e;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:.82em">🔔 开启通知</button></div>
     <div class=dash-grid id=dash-cards></div>
     <div class=card style="margin-bottom:14px"><h3>🔥 近期追踪</h3><div id=dash-recent></div></div>
     <div class=card><h3>🏆 TVL 排行</h3><div id=dash-toptvl></div></div>
@@ -223,6 +225,7 @@ document.querySelectorAll("nav button").forEach(b => b.onclick = function() {
   if (currentTab === "dashboard") loadDashboard();
   if (currentTab === "airdrops") loadAirdrops();
   if (currentTab === "prices") loadPrices();
+  if (currentTab === "testnets") loadTestnets();
 });
 
 // ===== Dashboard =====
@@ -436,6 +439,70 @@ async function addCandidate(name, chainId, token) {
   loadChains(); loadDashboard();
 }
 function exportCSV() { window.open(API + "/export"); }
+
+
+// ===== Testnets =====
+async function loadTestnets() {
+  const el = document.getElementById("testnet-list");
+  try {
+    const res = await fetch(API + "/testnets");
+    const data = await res.json();
+    if (!data.length) { el.innerHTML = '<p style=color:#666>暂无测试网数据</p>'; return; }
+    const active = data.filter(t=>t.status==='active');
+    const ended = data.filter(t=>t.status==='ended');
+    el.innerHTML = `
+      <div style="margin-bottom:12px">
+        <span style="background:#22c55e;color:#fff;padding:4px 12px;border-radius:8px;font-size:.8em;font-weight:700">🔥 进行中: ${active.length}</span>
+        <span style="background:#6b7280;color:#fff;padding:4px 12px;border-radius:8px;font-size:.8em;margin-left:8px">已结束: ${ended.length}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px">
+      ${[...active,...ended].map(t => {
+        const grade = t.potential==='S'?'#22c55e':t.potential==='A'?'#3b82f6':t.potential==='B'?'#f59e0b':'#6b7280';
+        const statusColor = t.status==='active'?'#22c55e':'#6b7280';
+        return `<div class=card style="border-left:3px solid ${grade}">
+          <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:6px">
+            <div>
+              <b style=font-size:.95em>${esc(t.name)}</b>
+              <span style="color:#888;font-size:.75em;margin-left:6px">${t.type}</span>
+            </div>
+            <span style="background:${grade};color:#fff;padding:2px 8px;border-radius:6px;font-size:.7em;font-weight:700">${t.potential}级</span>
+          </div>
+          <div style="font-size:.78em;color:#888;margin-bottom:4px">
+            <span style="background:${statusColor};color:#fff;padding:1px 6px;border-radius:4px;font-size:.75em;margin-right:6px">${t.status==='active'?'进行中':'已结束'}</span>
+            难度: ${t.difficulty==='easy'?'🟢 简单':t.difficulty==='medium'?'🟡 中等':'🔴 困难'}
+          </div>
+          <div style="font-size:.75em;color:#666">🎯 ${t.tasks}</div>
+        </div>`;
+      }).join("")}
+      </div>`;
+  } catch(e) { el.innerHTML = '<p style=color:#ef4444>加载失败</p>'; }
+}
+
+// ===== Notifications =====
+let notifyEnabled = false;
+function enableNotifications() {
+  if (!('Notification' in window)) { toast('浏览器不支持通知'); return; }
+  Notification.requestPermission().then(p => {
+    if (p === 'granted') { notifyEnabled = true; toast('🔔 通知已开启'); scheduleNotifications(); }
+    else { toast('通知权限被拒绝'); }
+  });
+}
+function scheduleNotifications() {
+  if (!notifyEnabled) return;
+  setInterval(async () => {
+    try {
+      const res = await fetch(API + "/summary");
+      const d = await res.json();
+      if (d.stats.pending_airdrop > 0) {
+        new Notification('🪂 Airdrop Hunter', { body: `${d.stats.pending_airdrop} 条链可能空投，快去交互!`, icon: '/icon-192.png' });
+      }
+    } catch(e) {}
+  }, 3600000); // Every hour
+}
+function notifyPriceAlert(token, price, change) {
+  if (!notifyEnabled || Math.abs(change) < 10) return;
+  new Notification('💹 价格提醒', { body: `${token}: $${price.toFixed(4)} (${change>0?'+':''}${change.toFixed(1)}%)`, icon: '/icon-192.png' });
+}
 
 // ===== Toast =====
 function toast(msg) {

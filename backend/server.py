@@ -22,9 +22,28 @@ DB_PATH = os.path.join(DATA_DIR, "airdrop_hunter.db")
 
 # Data sources
 CHAINS_URL = "https://api.llama.fi/chains"
+LLAMA_CHAIN_DETAIL = "https://api.llama.fi/v2/chains"
 COINGECKO_SEARCH = "https://api.coingecko.com/api/v3/search?query="
 COINGECKO_PRICE = "https://api.coingecko.com/api/v3/simple/price?ids={ids}&vs_currencies=usd&include_24hr_change=true"
-LLAMA_CHAIN_DETAIL = "https://api.llama.fi/v2/chains"
+
+# Active testnets — strong airdrop signals
+TESTNETS = [
+    {"name":"Monad Testnet","chain":"monad","type":"L1","status":"active","tasks":"faucet+swap+deploy","difficulty":"medium","potential":"S"},
+    {"name":"Berachain Artio","chain":"berachain","type":"L1","status":"active","tasks":"faucet+swap+lp","difficulty":"easy","potential":"S"},
+    {"name":"Scroll Alpha","chain":"scroll","type":"L2","status":"active","tasks":"bridge+swap+deploy","difficulty":"easy","potential":"A"},
+    {"name":"Linea Testnet","chain":"linea","type":"L2","status":"active","tasks":"bridge+swap+nft","difficulty":"easy","potential":"A"},
+    {"name":"Blast Testnet","chain":"blast","type":"L2","status":"active","tasks":"bridge+swap+lp","difficulty":"medium","potential":"A"},
+    {"name":"Mode Testnet","chain":"mode","type":"L2","status":"active","tasks":"bridge+swap+deploy","difficulty":"easy","potential":"B"},
+    {"name":"Taiko Testnet","chain":"taiko","type":"L2","status":"active","tasks":"bridge+swap","difficulty":"easy","potential":"B"},
+    {"name":"Polygon zkEVM","chain":"polygon-zkevm","type":"L2","status":"active","tasks":"bridge+swap+nft","difficulty":"easy","potential":"A"},
+    {"name":"Manta Pacific","chain":"manta","type":"L2","status":"active","tasks":"bridge+swap+lp","difficulty":"easy","potential":"A"},
+    {"name":"Zora Network","chain":"zora","type":"L2","status":"active","tasks":"bridge+nft+deploy","difficulty":"easy","potential":"B"},
+    {"name":"Mantle Testnet","chain":"mantle","type":"L2","status":"active","tasks":"bridge+swap","difficulty":"easy","potential":"B"},
+    {"name":"Starknet Testnet","chain":"starknet","type":"L2","status":"active","tasks":"bridge+swap+deploy","difficulty":"medium","potential":"A"},
+    {"name":"Shardeum Testnet","chain":"shardeum","type":"L1","status":"active","tasks":"faucet+swap+deploy","difficulty":"medium","potential":"A"},
+    {"name":"Sei Testnet","chain":"sei","type":"L1","status":"ended","tasks":"faucet+swap+lp","difficulty":"easy","potential":"C"},
+    {"name":"Sui Testnet","chain":"sui","type":"L1","status":"ended","tasks":"faucet+swap+nft","difficulty":"easy","potential":"C"},
+]
 
 os.makedirs(DATA_DIR, exist_ok=True)
 
@@ -537,6 +556,9 @@ class APIHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write("\n".join(csv_lines).encode())
             return
+
+        elif path == "/api/testnets":
+            self.wfile.write(json.dumps(TESTNETS, ensure_ascii=False).encode())
 
         elif path == "/api/templates":
             conn = get_db()
