@@ -108,7 +108,9 @@ tr:hover{background:#1a1d2e}
   <!-- Dashboard -->
   <section class=active id=sec-dashboard>
 <div style=margin-bottom:12px><button onclick="enableNotifications()" style="background:#2a2d3e;color:#ccc;border:1px solid #3a3d5e;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:.82em">🔔 开启通知</button></div>
+<div id=wallet-card class=card style="margin-bottom:14px;border-left:3px solid #8b5cf6"><h3>🔗 钱包: <span style="font-family:monospace;font-size:.75em;color:#8b5cf6">0x6F39...397F</span> <button onclick="scanWallet()" style="background:#8b5cf6;color:#fff;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;font-size:.7em;margin-left:8px">扫描</button></h3><div id=wallet-result style="font-size:.82em"><span style=color:#888>点击扫描多链钱包活动</span></div></div>
     <div class=dash-grid id=dash-cards></div>
+<div id=gas-card class=card style="margin-bottom:14px;border-left:3px solid #f59e0b"><h3>⛽ Gas 优化 <button onclick="loadGas()" style="background:#f59e0b;color:#000;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;font-size:.7em;margin-left:8px">刷新</button></h3><div id=gas-result style="font-size:.82em"><span style=color:#888>加载中...</span></div></div>
     <div class=card style="margin-bottom:14px"><h3>🔥 近期追踪</h3><div id=dash-recent></div></div>
     <div class=card><h3>🏆 TVL 排行</h3><div id=dash-toptvl></div></div>
   </section>
@@ -539,6 +541,55 @@ function openAddCost() {
   const cname = prompt('链名:', '');
   fetch(API + '/costs', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({amount_usd:parseFloat(amt),cost_type:ctype||'gas',chain_name:cname||''}) })
     .then(() => { loadROI(); toast('花费已记录'); });
+}
+
+
+
+// ===== Gas =====
+async function loadGas() {
+  const el = document.getElementById("gas-result");
+  try {
+    const res = await fetch(API + "/gas");
+    const d = await res.json();
+    const color = d.recommendation === 'safe' ? '#22c55e' : d.recommendation === 'wait' ? '#ef4444' : '#f59e0b';
+    el.innerHTML = `
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:4px">
+        <span>安全: <b style=color:#22c55e>${d.safe_gwei} gwei</b></span>
+        <span>标准: <b style=color:#f59e0b>${d.standard_gwei} gwei</b></span>
+        <span>快速: <b style=color:#ef4444>${d.fast_gwei} gwei</b></span>
+        <span>建议: <b style=color:${color}>${d.recommendation==='safe'?'🟢 便宜快冲':d.recommendation==='wait'?'🔴 太贵等等':'🟡 正常'}</b></span>
+      </div>
+      <div style="font-size:.75em;color:#666;margin-top:4px">
+        预估 Swap: ~$${d.estimated_cost_swap} | Bridge: ~$${d.estimated_cost_bridge} | 最佳时段: ${d.optimal_time} | 来源: ${d.source}
+      </div>`;
+  } catch(e) { el.innerHTML = '<span style=color:#ef4444>加载失败</span>'; }
+}
+loadGas();
+
+// ===== Wallet =====
+async function scanWallet() {
+  const el = document.getElementById("wallet-result");
+  el.innerHTML = '<span style=color:#f59e0b>扫描中...</span>';
+  try {
+    const res = await fetch(API + "/wallet/scan");
+    const d = await res.json();
+    const active = d.chains.filter(c => c.active);
+    el.innerHTML = `
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:4px">
+        <span>活跃链: <b style=color:#22c55e>${d.active_chains}/${d.scanned}</b></span>
+        <span>总交易: <b>${d.total_tx.toLocaleString()}</b></span>
+        <span>余额: <b>${d.total_balance_eth_equiv.toFixed(4)} ETH</b></span>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+        ${d.chains.map(c => {
+          const color = c.active ? '#22c55e' : '#6b7280';
+          return `<a href="${c.explorer||'#'}" target="_blank" style="text-decoration:none;color:#ccc;background:#1f2233;padding:4px 8px;border-radius:4px;font-size:.7em;border:1px solid ${color}">
+            ${c.chain} <span style=color:${color}>${c.balance!==null ? c.balance.toFixed(4)+' '+c.symbol : '—'}</span>
+            ${c.active ? '<span style=color:#22c55e>✓</span>' : ''}
+          </a>`;
+        }).join("")}
+      </div>`;
+  } catch(e) { el.innerHTML = '<span style=color:#ef4444>扫描失败</span>'; }
 }
 
 // ===== Toast =====

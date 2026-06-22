@@ -22,6 +22,21 @@ DB_PATH = os.path.join(DATA_DIR, "airdrop_hunter.db")
 
 # Data sources
 CHAINS_URL = "https://api.llama.fi/chains"
+WALLET_ADDRESS = "0x6F3933270ECEAc56BB6ae6F9726fF6831e73997F"
+
+# Multi-chain RPC endpoints for wallet scanning
+RPC_ENDPOINTS = [
+    {"chain":"Ethereum","rpc":"https://eth.llamarpc.com","explorer":"https://etherscan.io/address/{addr}","symbol":"ETH"},
+    {"chain":"BNB Chain","rpc":"https://binance.llamarpc.com","explorer":"https://bscscan.com/address/{addr}","symbol":"BNB"},
+    {"chain":"Arbitrum","rpc":"https://arb1.arbitrum.io/rpc","explorer":"https://arbiscan.io/address/{addr}","symbol":"ETH"},
+    {"chain":"Optimism","rpc":"https://mainnet.optimism.io","explorer":"https://optimistic.etherscan.io/address/{addr}","symbol":"ETH"},
+    {"chain":"Polygon","rpc":"https://polygon.llamarpc.com","explorer":"https://polygonscan.com/address/{addr}","symbol":"MATIC"},
+    {"chain":"Base","rpc":"https://mainnet.base.org","explorer":"https://basescan.org/address/{addr}","symbol":"ETH"},
+    {"chain":"Avalanche","rpc":"https://api.avax.network/ext/bc/C/rpc","explorer":"https://snowtrace.io/address/{addr}","symbol":"AVAX"},
+    {"chain":"Fantom","rpc":"https://rpc.ftm.tools","explorer":"https://ftmscan.com/address/{addr}","symbol":"FTM"},
+    {"chain":"Linea","rpc":"https://rpc.linea.build","explorer":"https://lineascan.build/address/{addr}","symbol":"ETH"},
+    {"chain":"Scroll","rpc":"https://rpc.scroll.io","explorer":"https://scrollscan.com/address/{addr}","symbol":"ETH"},
+]
 LLAMA_CHAIN_DETAIL = "https://api.llama.fi/v2/chains"
 COINGECKO_SEARCH = "https://api.coingecko.com/api/v3/search?query="
 COINGECKO_PRICE = "https://api.coingecko.com/api/v3/simple/price?ids={ids}&vs_currencies=usd&include_24hr_change=true"
@@ -222,6 +237,113 @@ def _update_prices():
         _last_price_update = now
     except Exception as e:
         pass  # Silent fail - prices are best-effort
+
+
+
+# ----- Gas Tracker -----
+def get_gas_prices():
+    """Fetch current gas prices for cost optimization."""
+    try:
+        # Etherscan gas oracle (free, no key needed for basic)
+        req = urllib.request.Request(
+            "https://api.etherscan.io/api?module=gastracker&action=gasoracle",
+            headers={"User-Agent": "Mozilla/5.0"}
+        )
+        data = json.loads(urllib.request.urlopen(req, timeout=8).read())
+        if data.get("status") == "1":
+            result = data["result"]
+            safe = int(result.get("SafeGasPrice", 0))
+            propose = int(result.get("ProposeGasPrice", 0))
+            fast = int(result.get("FastGasPrice", 0))
+            base = float(result.get("suggestBaseFee", 0))
+            return {
+                "source": "Etherscan",
+                "safe_gwei": safe,
+                "standard_gwei": propose,
+                "fast_gwei": fast,
+                "base_fee_gwei": base,
+                "recommendation": "safe" if safe < 15 else "standard" if propose < 25 else "wait",
+                "optimal_time": "周末凌晨 (UTC 18:00-22:00)" if propose > 20 else "随时",
+                "estimated_cost_swap": round(propose * 200000 / 1e9, 4),
+                "estimated_cost_bridge": round(propose * 400000 / 1e9, 4),
+                "eth_price": None,
+            }
+    except:
+        pass
+    
+    # Fallback: rough estimate
+    return {
+        "source": "estimated",
+        "safe_gwei": 10,
+        "standard_gwei": 15,
+        "fast_gwei": 25,
+        "base_fee_gwei": 8,
+        "recommendation": "standard",
+        "optimal_time": "不确定",
+        "estimated_cost_swap": 0.003,
+        "estimated_cost_bridge": 0.006,
+        "eth_price": None,
+    }
+
+# ----- Wallet Scanner -----
+def scan_wallet():
+    """Scan wallet balance and tx count across multiple chains via JSON-RPC."""
+    results = []
+    for chain in RPC_ENDPOINTS:
+        try:
+            # Get balance
+            payload = json.dumps({
+                "jsonrpc":"2.0","method":"eth_getBalance",
+                "params":[WALLET_ADDRESS, "latest"],"id":1
+            }).encode()
+            req = urllib.request.Request(chain["rpc"], data=payload,
+                headers={"Content-Type":"application/json"})
+            resp = json.loads(urllib.request.urlopen(req, timeout=8).read())
+            balance_wei = int(resp.get("result","0x0"), 16)
+            balance = balance_wei / 1e18
+
+            # Get tx count
+            payload2 = json.dumps({
+                "jsonrpc":"2.0","method":"eth_getTransactionCount",
+                "params":[WALLET_ADDRESS, "latest"],"id":2
+            }).encode()
+            req2 = urllib.request.Request(chain["rpc"], data=payload2,
+                headers={"Content-Type":"application/json"})
+            resp2 = json.loads(urllib.request.urlopen(req2, timeout=8).read())
+            tx_count = int(resp2.get("result","0x0"), 16)
+
+            results.append({
+                "chain": chain["chain"],
+                "symbol": chain["symbol"],
+                "balance": round(balance, 6),
+                "tx_count": tx_count,
+                "explorer": chain["explorer"].replace("{addr}", WALLET_ADDRESS),
+                "active": tx_count > 0,
+            })
+        except Exception as e:
+            results.append({
+                "chain": chain["chain"],
+                "symbol": chain["symbol"],
+                "balance": None,
+                "tx_count": None,
+                "error": str(e)[:100],
+                "active": False,
+            })
+
+    # Count active chains
+    active = sum(1 for r in results if r.get("active"))
+    total_balance = sum(r["balance"] for r in results if r["balance"])
+    total_tx = sum(r["tx_count"] for r in results if r["tx_count"])
+
+    return {
+        "address": WALLET_ADDRESS,
+        "scanned": len(results),
+        "active_chains": active,
+        "total_tx": total_tx,
+        "total_balance_eth_equiv": round(total_balance, 4),
+        "chains": results,
+        "scanned_at": datetime.datetime.now().isoformat(),
+    }
 
 # ----- Chain Discovery -----
 def discover_chains():
@@ -584,6 +706,14 @@ class APIHandler(BaseHTTPRequestHandler):
                 "costs": [dict(r) for r in cost_rows],
                 "claims": [dict(r) for r in claimed_rows],
             }, ensure_ascii=False).encode())
+
+        elif path == "/api/gas":
+            result = get_gas_prices()
+            self.wfile.write(json.dumps(result, ensure_ascii=False).encode())
+
+        elif path == "/api/wallet/scan":
+            result = scan_wallet()
+            self.wfile.write(json.dumps(result, ensure_ascii=False).encode())
 
         elif path == "/api/testnets":
             self.wfile.write(json.dumps(TESTNETS, ensure_ascii=False).encode())
