@@ -128,6 +128,18 @@ def init_db():
             active INTEGER DEFAULT 1
         )
     """)
+    # ROI tracking
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS costs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            chain_id INTEGER,
+            cost_type TEXT DEFAULT 'gas',
+            amount_usd REAL DEFAULT 0,
+            chain_name TEXT DEFAULT '',
+            notes TEXT DEFAULT '',
+            created_at TEXT DEFAULT (date('now'))
+        )
+    """)
     # Seed default templates if empty
     count = conn.execute("SELECT COUNT(*) FROM templates").fetchone()[0]
     if count == 0:
@@ -557,6 +569,22 @@ class APIHandler(BaseHTTPRequestHandler):
             self.wfile.write("\n".join(csv_lines).encode())
             return
 
+        elif path == "/api/roi":
+            conn = get_db()
+            total_cost = conn.execute("SELECT SUM(amount_usd) FROM costs").fetchone()[0] or 0
+            total_claimed = conn.execute("SELECT SUM(claimed_amount) FROM chains").fetchone()[0] or 0
+            cost_rows = conn.execute("SELECT * FROM costs ORDER BY created_at DESC LIMIT 50").fetchall()
+            claimed_rows = conn.execute("SELECT name, claimed_amount, claimed_date FROM chains WHERE claimed_amount > 0 ORDER BY claimed_amount DESC").fetchall()
+            conn.close()
+            self.wfile.write(json.dumps({
+                "total_cost": round(total_cost, 2),
+                "total_claimed": round(total_claimed, 2),
+                "net_profit": round(total_claimed - total_cost, 2),
+                "roi_pct": round(((total_claimed - total_cost) / total_cost * 100) if total_cost > 0 else 0, 1),
+                "costs": [dict(r) for r in cost_rows],
+                "claims": [dict(r) for r in claimed_rows],
+            }, ensure_ascii=False).encode())
+
         elif path == "/api/testnets":
             self.wfile.write(json.dumps(TESTNETS, ensure_ascii=False).encode())
 
@@ -742,6 +770,16 @@ class APIHandler(BaseHTTPRequestHandler):
             conn.commit()
             conn.close()
             self.wfile.write(json.dumps({"ok": True, "actions": len(actions)}).encode())
+
+
+        elif path == "/api/costs":
+            conn = get_db()
+            conn.execute("INSERT INTO costs (chain_id, cost_type, amount_usd, chain_name, notes) VALUES (?,?,?,?,?)",
+                (body.get("chain_id"), body.get("cost_type","gas"), body.get("amount_usd",0),
+                 body.get("chain_name",""), body.get("notes","")))
+            conn.commit()
+            conn.close()
+            self.wfile.write(b'{"ok":true}')
 
     def do_OPTIONS(self):
         self.send_response(200)

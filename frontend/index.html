@@ -101,6 +101,7 @@ tr:hover{background:#1a1d2e}
   <button data-tab=airdrops>🎁 空投</button>
   <button data-tab=prices>💹 价格</button>
   <button data-tab=testnets>🧪 测试网</button>
+  <button data-tab=roi>💰 收益</button>
 </nav>
 
 <main>
@@ -226,6 +227,7 @@ document.querySelectorAll("nav button").forEach(b => b.onclick = function() {
   if (currentTab === "airdrops") loadAirdrops();
   if (currentTab === "prices") loadPrices();
   if (currentTab === "testnets") loadTestnets();
+  if (currentTab === "roi") loadROI();
 });
 
 // ===== Dashboard =====
@@ -502,6 +504,41 @@ function scheduleNotifications() {
 function notifyPriceAlert(token, price, change) {
   if (!notifyEnabled || Math.abs(change) < 10) return;
   new Notification('💹 价格提醒', { body: `${token}: $${price.toFixed(4)} (${change>0?'+':''}${change.toFixed(1)}%)`, icon: '/icon-192.png' });
+}
+
+
+// ===== ROI =====
+async function loadROI() {
+  const el = document.getElementById("roi-content");
+  try {
+    const res = await fetch(API + "/roi");
+    const d = await res.json();
+    const profitColor = d.net_profit >= 0 ? '#22c55e' : '#ef4444';
+    el.innerHTML = `
+      <div class=dash-grid>
+        <div class=card><h3>💸 总花费</h3><div class=big>$${d.total_cost.toLocaleString()}</div></div>
+        <div class=card><h3>🎁 总领取</h3><div class=big>$${d.total_claimed.toLocaleString()}</div></div>
+        <div class=card><h3>📈 净利润</h3><div class=big style=color:${profitColor}>$${d.net_profit.toLocaleString()}</div><div class=sub>ROI: ${d.roi_pct}%</div></div>
+      </div>
+      ${d.costs && d.costs.length ? `<div class=card style=margin-bottom:12px><h3>📋 花费明细</h3>
+        ${d.costs.map(c => `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #1f2233;font-size:.82em">
+          <span>${c.chain_name||'—'} · ${c.cost_type}</span>
+          <span style=color:#ef4444>-$${(c.amount_usd||0).toFixed(2)} <span style=color:#666;font-size:.75em>${c.created_at||''}</span></span>
+        </div>`).join("")}</div>` : '<p style=color:#666>暂无花费记录</p>'}
+      ${d.claims && d.claims.length ? `<div class=card><h3>🏆 空投收益</h3>
+        ${d.claims.map(c => `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #1f2233;font-size:.82em">
+          <span><b>${esc(c.name)}</b></span>
+          <span style=color:#22c55e>+$${(c.claimed_amount||0).toFixed(2)} <span style=color:#666;font-size:.75em>${c.claimed_date||''}</span></span>
+        </div>`).join("")}</div>` : ''}`;
+  } catch(e) { el.innerHTML = '<p style=color:#ef4444>加载失败</p>'; }
+}
+function openAddCost() {
+  const amt = prompt('花费金额($):', '0');
+  if (!amt) return;
+  const ctype = prompt('类型 (gas/bridge/nft/other):', 'gas');
+  const cname = prompt('链名:', '');
+  fetch(API + '/costs', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({amount_usd:parseFloat(amt),cost_type:ctype||'gas',chain_name:cname||''}) })
+    .then(() => { loadROI(); toast('花费已记录'); });
 }
 
 // ===== Toast =====
