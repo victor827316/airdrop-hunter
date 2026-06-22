@@ -24,6 +24,7 @@ DB_PATH = os.path.join(DATA_DIR, "airdrop_hunter.db")
 CHAINS_URL = "https://api.llama.fi/chains"
 COINGECKO_SEARCH = "https://api.coingecko.com/api/v3/search?query="
 COINGECKO_PRICE = "https://api.coingecko.com/api/v3/simple/price?ids={ids}&vs_currencies=usd&include_24hr_change=true"
+LLAMA_CHAIN_DETAIL = "https://api.llama.fi/v2/chains"
 
 os.makedirs(DATA_DIR, exist_ok=True)
 
@@ -85,6 +86,41 @@ def init_db():
             date_added TEXT DEFAULT (date('now'))
         )
     """)
+    # Interaction log
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS interactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            chain_id INTEGER NOT NULL,
+            action_type TEXT NOT NULL,
+            tx_hash TEXT DEFAULT '',
+            amount_usd REAL DEFAULT 0,
+            notes TEXT DEFAULT '',
+            created_at TEXT DEFAULT (datetime('now'))
+        )
+    """)
+    # Interaction templates
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS templates (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            description TEXT DEFAULT '',
+            actions TEXT DEFAULT '[]',
+            frequency TEXT DEFAULT 'weekly',
+            active INTEGER DEFAULT 1
+        )
+    """)
+    # Seed default templates if empty
+    count = conn.execute("SELECT COUNT(*) FROM templates").fetchone()[0]
+    if count == 0:
+        defaults = [
+            ("标准空投三件套", "Swap + LP + Bridge — 覆盖大多数空投要求", '["swap","lp_add","bridge"]', "weekly"),
+            ("Swap交互流", "在各DEX执行代币兑换", '["swap","swap","swap"]', "daily"),
+            ("LP挖矿流", "添加流动性获得收益+空投", '["lp_add","lp_add"]', "weekly"),
+            ("跨链桥接流", "桥接资产覆盖多链", '["bridge","bridge"]', "weekly"),
+            ("NFT铸造流", "铸造NFT获取生态空投", '["nft","nft"]', "weekly"),
+            ("合约交互流", "部署/调用合约证明活跃", '["contract","contract"]', "monthly"),
+        ]
+        conn.executemany("INSERT INTO templates (name, description, actions, frequency) VALUES (?,?,?,?)", defaults)
     conn.commit()
     conn.close()
 
@@ -195,6 +231,176 @@ def discover_chains():
     candidates.sort(key=lambda x: x["tvl"])
     return {"candidates": candidates, "total_scanned": len(chains), "source": "DefiLlama", "date": str(datetime.date.today())}
 
+def score_chain(name, tvl, token_symbol, protocol_count=0, mcap=0, tvl_change_7d=0):
+    """Score a chain 0-100 based on airdrop hunting potential."""
+    score = 0
+    details = []
+
+    # 1. TVL Fit (25 pts) — sweet spot $100K-$50M
+    if tvl < 100_000:
+        score += 5; details.append("TVL极低(5)")
+    elif tvl < 1_000_000:
+        score += 15; details.append("TVL早期(15)")
+    elif tvl < 10_000_000:
+        score += 25; details.append("TVL适中(25)")
+    elif tvl < 50_000_000:
+        score += 20; details.append("TVL较高(20)")
+    else:
+        score += 10; details.append("TVL过高(10)")
+
+    # 2. Protocol Count (15 pts) — activity indicator
+    if protocol_count == 0:
+        score += 3; details.append("协议数未知(3)")
+    elif protocol_count < 5:
+        score += 10; details.append("协议少易抢跑(10)")
+    elif protocol_count < 20:
+        score += 15; details.append("生态初成(15)")
+    elif protocol_count < 50:
+        score += 12; details.append("生态活跃(12)")
+    else:
+        score += 8; details.append("生态成熟(8)")
+
+    # 3. Growth (20 pts) — momentum
+    if tvl_change_7d > 50:
+        score += 20; details.append("7日暴涨(20)")
+    elif tvl_change_7d > 20:
+        score += 15; details.append("7日高增长(15)")
+    elif tvl_change_7d > 5:
+        score += 10; details.append("7日正增长(10)")
+    elif tvl_change_7d > -5:
+        score += 5; details.append("7日持平(5)")
+    else:
+        score += 2; details.append("7日下降(2)")
+
+    # 4. Token Status (15 pts) — no token = potential airdrop
+    if not token_symbol:
+        score += 15; details.append("未发币(15)")
+    elif mcap == 0:
+        score += 12; details.append("低市值(12)")
+    elif mcap < 10_000_000:
+        score += 10; details.append("小额MC(10)")
+    elif mcap < 100_000_000:
+        score += 6; details.append("中额MC(6)")
+    else:
+        score += 2; details.append("大额MC(2)")
+
+    # 5. Difficulty (15 pts) — how easy to interact
+    if protocol_count < 5:
+        score += 15; details.append("极简交互(15)")
+    elif protocol_count < 15:
+        score += 12; details.append("简单交互(12)")
+    elif protocol_count < 30:
+        score += 8; details.append("中等交互(8)")
+    else:
+        score += 4; details.append("复杂交互(4)")
+
+    # 6. Bonus: name recognition (10 pts)
+    HOT_KEYWORDS = ["rollup","zk","layer","l2","defi","perp","dex","lending","nft","game","ai","rwa","restake"]
+    name_lower = name.lower()
+    bonus = sum(2 for kw in HOT_KEYWORDS if kw in name_lower)
+    bonus = min(bonus, 10)
+    score += bonus
+    if bonus > 0:
+        details.append(f"热门标签({bonus})")
+
+    # Rating
+    if score >= 75:
+        rating = "S"
+    elif score >= 60:
+        rating = "A"
+    elif score >= 45:
+        rating = "B"
+    elif score >= 30:
+        rating = "C"
+    else:
+        rating = "D"
+
+    return {
+        "score": min(score, 100),
+        "rating": rating,
+        "details": details,
+    }
+
+def discover_scored():
+    """Fetch chains from DefiLlama with detailed scoring."""
+    try:
+        req = urllib.request.Request(CHAINS_URL, headers={"User-Agent": "Mozilla/5.0"})
+        chains = json.loads(urllib.request.urlopen(req, timeout=15).read())
+    except Exception as e:
+        return {"error": str(e), "candidates": []}
+
+    # Try to get detailed chain data
+    detail_map = {}
+    try:
+        dreq = urllib.request.Request(LLAMA_CHAIN_DETAIL, headers={"User-Agent": "Mozilla/5.0"})
+        details = json.loads(urllib.request.urlopen(dreq, timeout=15).read())
+        for d in details:
+            detail_map[d.get("name","").lower()] = {
+                "protocols": d.get("protocols", 0),
+                "mcap": d.get("mcap", 0),
+                "change_7d": d.get("change_7d", 0),
+            }
+    except:
+        pass
+
+    ESTABLISHED = {
+        "Ethereum","Bitcoin","Solana","BNB","Avalanche","Polygon",
+        "Arbitrum","Optimism","Base","Sui","Aptos","Near","Fantom",
+        "Cosmos","Osmosis","Injective","Sei","Tron","Cardano",
+        "Polkadot","Kusama","Cronos","Celo","Gnosis","Moonbeam",
+        "Kava","Flare","Algorand","Hedera","MultiversX","Tezos",
+        "Klaytn","Zilliqa","Evmos","Stargaze","Juno","Secret","Axelar",
+    }
+
+    conn = get_db()
+    existing = set(r[0] for r in conn.execute("SELECT name FROM chains").fetchall())
+    conn.close()
+
+    candidates = []
+    for c in chains:
+        name = c.get("name", "")
+        tvl = c.get("tvl", 0)
+        if tvl > 50_000_000 or name in ESTABLISHED or name in existing:
+            continue
+
+        token = c.get("tokenSymbol", "")
+        chain_info = detail_map.get(name.lower(), {})
+        scoring = score_chain(
+            name=name,
+            tvl=tvl,
+            token_symbol=token,
+            protocol_count=chain_info.get("protocols", 0),
+            mcap=chain_info.get("mcap", 0),
+            tvl_change_7d=chain_info.get("change_7d", 0),
+        )
+
+        candidates.append({
+            "name": name,
+            "tvl": tvl,
+            "chain_id": str(c.get("chainId", "") or ""),
+            "token": token,
+            "gecko_id": c.get("gecko_id", ""),
+            "protocols": chain_info.get("protocols", 0),
+            "mcap": chain_info.get("mcap", 0),
+            "change_7d": chain_info.get("change_7d", 0),
+            **scoring,
+        })
+
+    candidates.sort(key=lambda x: x["score"], reverse=True)
+
+    # Count by rating
+    rating_counts = {"S":0,"A":0,"B":0,"C":0,"D":0}
+    for c in candidates:
+        rating_counts[c["rating"]] += 1
+
+    return {
+        "candidates": candidates,
+        "total_scanned": len(chains),
+        "source": "DefiLlama",
+        "date": str(datetime.date.today()),
+        "rating_counts": rating_counts,
+    }
+
 def discover_hot_airdrops():
     """Return tracked chains that might have upcoming airdrops."""
     conn = get_db()
@@ -255,6 +461,10 @@ class APIHandler(BaseHTTPRequestHandler):
 
         elif path == "/api/discover":
             result = discover_chains()
+            self.wfile.write(json.dumps(result, ensure_ascii=False).encode())
+
+        elif path == "/api/discover/scored":
+            result = discover_scored()
             self.wfile.write(json.dumps(result, ensure_ascii=False).encode())
 
         elif path == "/api/airdrops":
@@ -327,6 +537,55 @@ class APIHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write("\n".join(csv_lines).encode())
             return
+
+        elif path == "/api/templates":
+            conn = get_db()
+            rows = conn.execute("SELECT * FROM templates ORDER BY id").fetchall()
+            conn.close()
+            self.wfile.write(json.dumps([dict(r) for r in rows], ensure_ascii=False).encode())
+
+        elif path == "/api/interactions":
+            conn = get_db()
+            rows = conn.execute("""
+                SELECT i.*, c.name as chain_name FROM interactions i
+                LEFT JOIN chains c ON i.chain_id = c.id
+                ORDER BY i.created_at DESC LIMIT 100
+            """).fetchall()
+            conn.close()
+            self.wfile.write(json.dumps([dict(r) for r in rows], ensure_ascii=False).encode())
+
+        elif path == "/api/interactions/calendar":
+            conn = get_db()
+            rows = conn.execute("""
+                SELECT date(created_at) as day, action_type, COUNT(*) as count,
+                GROUP_CONCAT(DISTINCT c.name) as chains
+                FROM interactions i
+                LEFT JOIN chains c ON i.chain_id = c.id
+                WHERE created_at >= date('now', '-30 days')
+                GROUP BY date(created_at), action_type
+                ORDER BY day DESC LIMIT 365
+            """).fetchall()
+            conn.close()
+            self.wfile.write(json.dumps([dict(r) for r in rows], ensure_ascii=False).encode())
+
+        elif path == "/api/eligibility/overview":
+            conn = get_db()
+            total = conn.execute("SELECT COUNT(*) FROM chains").fetchone()[0]
+            eligible = conn.execute("SELECT COUNT(*) FROM chains WHERE airdrop_eligible=1").fetchone()[0]
+            not_eligible = conn.execute("SELECT COUNT(*) FROM chains WHERE airdrop_eligible=0").fetchone()[0]
+            unchecked = conn.execute("SELECT COUNT(*) FROM chains WHERE airdrop_eligible=-1").fetchone()[0]
+            claimed = conn.execute("SELECT SUM(claimed_amount) FROM chains").fetchone()[0] or 0
+            low = conn.execute("""
+                SELECT name, token, tge_status, (swaps+lp_added+bridges+nfts+contracts) as total_actions
+                FROM chains WHERE status != 'done' AND tge_status IN ('unknown','pending')
+                ORDER BY total_actions ASC LIMIT 10
+            """).fetchall()
+            conn.close()
+            self.wfile.write(json.dumps({
+                "total": total, "eligible": eligible, "not_eligible": not_eligible,
+                "unchecked": unchecked, "claimed": round(claimed, 2),
+                "needs_action": [dict(r) for r in low],
+            }, ensure_ascii=False).encode())
 
         else:
             self.send_response(404)
@@ -419,6 +678,48 @@ class APIHandler(BaseHTTPRequestHandler):
             _last_price_update = 0
             _update_prices()
             self.wfile.write(b'{"ok":true}')
+
+
+        elif path == "/api/interactions":
+            conn = get_db()
+            conn.execute("""
+                INSERT INTO interactions (chain_id, action_type, tx_hash, amount_usd, notes)
+                VALUES (?, ?, ?, ?, ?)
+            """, (body.get("chain_id"), body.get("action_type",""),
+                  body.get("tx_hash",""), body.get("amount_usd",0), body.get("notes","")))
+            action = body.get("action_type", "")
+            field_map = {"swap": "swaps", "lp_add": "lp_added", "bridge": "bridges", "nft": "nfts", "contract": "contracts"}
+            if action in field_map:
+                conn.execute(f"UPDATE chains SET {field_map[action]} = {field_map[action]} + 1, status='active', date_updated=date('now') WHERE id=?", (body.get("chain_id"),))
+            conn.commit()
+            conn.close()
+            self.wfile.write(b'{"ok":true}')
+
+        elif path == "/api/chains/quick-action":
+            chain_id = body.get("chain_id")
+            if not chain_id:
+                self.wfile.write(b'{"error":"chain_id required"}')
+                return
+            conn = get_db()
+            actions = body.get("actions", ["swap"])
+            notes = body.get("notes", "")
+            field_updates = {"swaps": 0, "lp_added": 0, "bridges": 0, "nfts": 0, "contracts": 0}
+            for act in actions:
+                conn.execute("INSERT INTO interactions (chain_id, action_type, notes) VALUES (?,?,?)", (chain_id, act, notes))
+                if act == "swap": field_updates["swaps"] += 1
+                elif act == "lp_add": field_updates["lp_added"] += 1
+                elif act == "bridge": field_updates["bridges"] += 1
+                elif act == "nft": field_updates["nfts"] += 1
+                elif act == "contract": field_updates["contracts"] += 1
+            conn.execute("""
+                UPDATE chains SET swaps=swaps+?, lp_added=lp_added+?, bridges=bridges+?,
+                nfts=nfts+?, contracts=contracts+?, status='active', date_updated=date('now')
+                WHERE id=?
+            """, (field_updates["swaps"], field_updates["lp_added"], field_updates["bridges"],
+                  field_updates["nfts"], field_updates["contracts"], chain_id))
+            conn.commit()
+            conn.close()
+            self.wfile.write(json.dumps({"ok": True, "actions": len(actions)}).encode())
 
     def do_OPTIONS(self):
         self.send_response(200)

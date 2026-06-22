@@ -24,8 +24,6 @@ nav button.active{background:#8b5cf6;color:#fff}
 main{padding:16px 20px;max-width:1400px;margin:0 auto}
 section{display:none}
 section.active{display:block}
-
-/* Dashboard */
 .dash-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-bottom:16px}
 .card{background:#1a1d2e;border-radius:8px;padding:16px;border:1px solid #2a2d3e}
 .card h3{font-size:.85em;color:#888;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px}
@@ -34,8 +32,6 @@ section.active{display:block}
 .price-item{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #1f2233;font-size:.85em}
 .price-up{color:#22c55e}
 .price-down{color:#ef4444}
-
-/* Table */
 .toolbar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
 .toolbar input,.toolbar select,.toolbar button{padding:7px 12px;border-radius:6px;border:1px solid #2a2d3e;background:#1a1d2e;color:#ccc;font-size:.82em}
 .toolbar button{background:#8b5cf6;color:#fff;border:none;cursor:pointer}
@@ -45,8 +41,6 @@ table{width:100%;border-collapse:collapse;font-size:.82em}
 th{text-align:left;padding:10px 8px;background:#1a1d2e;color:#888;font-weight:500;border-bottom:2px solid #2a2d3e;position:sticky;top:0;z-index:1}
 td{padding:7px 8px;border-bottom:1px solid #1a1d2e}
 tr:hover{background:#1a1d2e}
-
-/* Badges */
 .badge{padding:2px 8px;border-radius:10px;font-size:.7em;font-weight:600}
 .badge-new{background:#3b82f6;color:#fff}
 .badge-active{background:#22c55e;color:#fff}
@@ -57,17 +51,19 @@ tr:hover{background:#1a1d2e}
 .badge-high{background:#ef4444;color:#fff}
 .badge-medium{background:#f59e0b;color:#000}
 .badge-low{background:#6b7280;color:#fff}
-
-/* Airdrop cards */
+.badge-s{background:#22c55e;color:#fff}
+.badge-a{background:#3b82f6;color:#fff}
+.badge-b{background:#f59e0b;color:#000}
+.badge-c{background:#6b7280;color:#fff}
 .airdrop-card{background:#1a1d2e;border:1px solid #2a2d3e;border-radius:8px;padding:14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
 .airdrop-card .name{font-weight:600;font-size:.95em}
 .airdrop-card .info{color:#888;font-size:.78em}
 .airdrop-card .potential{font-size:.75em;font-weight:600;padding:3px 10px;border-radius:12px}
-
-/* Modal */
+.scored-row{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid #2a2d3e;font-size:.84em;flex-wrap:wrap;gap:6px}
+.scored-row:hover{background:#2a2d3e;border-radius:6px}
 .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.75);z-index:100;justify-content:center;align-items:center}
 .modal.active{display:flex}
-.modal-content{background:#1a1d2e;border-radius:12px;padding:22px;max-width:520px;width:90%;max-height:85vh;overflow-y:auto}
+.modal-content{background:#1a1d2e;border-radius:12px;padding:22px;max-width:540px;width:90%;max-height:85vh;overflow-y:auto}
 .modal-content h2{margin-bottom:14px;font-size:1.1em}
 .modal-content label{display:block;margin:8px 0 3px;font-size:.8em;color:#888}
 .modal-content input,.modal-content select,.modal-content textarea{width:100%;padding:7px;border-radius:6px;border:1px solid #2a2d3e;background:#0f1117;color:#ccc;margin-bottom:6px;font-size:.85em}
@@ -76,15 +72,9 @@ tr:hover{background:#1a1d2e}
 .modal-actions .btn-save{background:#8b5cf6;color:#fff}
 .modal-actions .btn-cancel{background:#2a2d3e;color:#ccc}
 .modal-actions .btn-delete{background:#ef4444;color:#fff}
-
-#discover-results{max-height:380px;overflow-y:auto;margin:10px 0}
-#discover-results .candidate{display:flex;justify-content:space-between;align-items:center;padding:8px;border-bottom:1px solid #2a2d3e;font-size:.85em}
-#discover-results .candidate:hover{background:#2a2d3e;border-radius:6px}
-
-/* Toast */
+#discover-results{max-height:420px;overflow-y:auto;margin:10px 0}
 .toast{position:fixed;bottom:20px;right:20px;background:#22c55e;color:#fff;padding:10px 20px;border-radius:8px;font-size:.85em;z-index:200;opacity:0;transition:opacity .3s}
 .toast.show{opacity:1}
-
 @media(max-width:768px){
   header{flex-direction:column;align-items:flex-start}
   th,td{font-size:.72em;padding:5px 4px}
@@ -113,61 +103,41 @@ tr:hover{background:#1a1d2e}
 </nav>
 
 <main>
-  <!-- Dashboard Section -->
+  <!-- Dashboard -->
   <section class=active id=sec-dashboard>
     <div class=dash-grid id=dash-cards></div>
-    <div class=card style="margin-bottom:14px">
-      <h3>🔥 近期追踪</h3>
-      <div id=dash-recent></div>
-    </div>
-    <div class=card>
-      <h3>🏆 TVL 排行</h3>
-      <div id=dash-toptvl></div>
-    </div>
+    <div class=card style="margin-bottom:14px"><h3>🔥 近期追踪</h3><div id=dash-recent></div></div>
+    <div class=card><h3>🏆 TVL 排行</h3><div id=dash-toptvl></div></div>
   </section>
-
-  <!-- Chains Section -->
+  <!-- Chains -->
   <section id=sec-chains>
     <div class=toolbar>
       <input placeholder="搜索链名..." oninput="filterChains()" id=search>
       <select onchange="filterChains()" id=filter-status>
-        <option value=all>全部状态</option>
-        <option value=new>新链</option>
-        <option value=active>已交互</option>
-        <option value=done>已完成</option>
+        <option value=all>全部状态</option><option value=new>新链</option><option value=active>已交互</option><option value=done>已完成</option>
       </select>
       <button onclick="openDiscover()">🔍 发现新链</button>
       <button class=green onclick="openAddChain()">+ 添加</button>
       <button class=secondary onclick="exportCSV()">📥 CSV</button>
     </div>
     <table id=chain-table>
-      <thead><tr>
-        <th>链名</th><th>Chain ID</th><th>代币</th><th>Swap</th><th>LP</th><th>Bridge</th><th>NFT</th>
-        <th>合约</th><th>发币</th><th>空投</th><th>领取</th><th>操作</th>
-      </tr></thead>
+      <thead><tr><th>链名</th><th>Chain ID</th><th>代币</th><th>Swap</th><th>LP</th><th>Bridge</th><th>NFT</th><th>合约</th><th>发币</th><th>空投</th><th>领取</th><th>操作</th></tr></thead>
       <tbody></tbody>
     </table>
   </section>
-
-  <!-- Airdrops Section -->
+  <!-- Airdrops -->
   <section id=sec-airdrops>
     <div class=toolbar>
       <button onclick="loadAirdrops()">🔄 刷新</button>
       <button class=green onclick="openAddAirdropEvent()">+ 添加事件</button>
     </div>
     <div id=airdrop-list><p style=color:#888>加载中...</p></div>
-    <div class=card style=margin-top:14px>
-      <h3>📋 空投事件记录</h3>
-      <div id=airdrop-events></div>
-    </div>
+    <div class=card style=margin-top:14px><h3>📋 空投事件记录</h3><div id=airdrop-events></div></div>
   </section>
-
-  <!-- Prices Section -->
+  <!-- Prices -->
   <section id=sec-prices>
-    <div class=toolbar>
-      <button onclick="refreshPrices()">🔄 刷新价格</button>
-    </div>
-    <div id=price-list><p style=color:#888>加载中... (需要先追踪有代币的链)</p></div>
+    <div class=toolbar><button onclick="refreshPrices()">🔄 刷新价格</button></div>
+    <div id=price-list><p style=color:#888>加载中... (需追踪有代币的链)</p></div>
   </section>
 </main>
 
@@ -189,14 +159,9 @@ tr:hover{background:#1a1d2e}
       <div><label>NFT</label><input type=number id=edit-nfts value=0></div>
       <div><label>合约</label><input type=number id=edit-contracts value=0></div>
     </div>
-    <label>发币状态</label><select id=edit-tge>
-      <option value=unknown>未知</option><option value=pending>待发币</option>
-      <option value=live>已发币</option><option value=airdrop>已空投</option>
-    </select>
-    <label>空投资格</label><select id=edit-eligible>
-      <option value=-1>未检查</option><option value=1>有资格</option><option value=0>无资格</option>
-    </select>
-    <label>已领取($)</label><input type=number id=edit-claimed value=0 step=0.01>
+    <label>发币</label><select id=edit-tge><option value=unknown>未知</option><option value=pending>待发币</option><option value=live>已发币</option><option value=airdrop>已空投</option></select>
+    <label>空投</label><select id=edit-eligible><option value=-1>未检查</option><option value=1>有资格</option><option value=0>无资格</option></select>
+    <label>领取($)</label><input type=number id=edit-claimed value=0 step=0.01>
     <label>备注</label><textarea id=edit-notes rows=2></textarea>
     <div class=modal-actions>
       <button class=btn-cancel onclick="closeModal()">取消</button>
@@ -210,11 +175,12 @@ tr:hover{background:#1a1d2e}
 <div class=modal id=discover-modal>
   <div class=modal-content>
     <h2>🔍 链发现 — DefiLlama</h2>
-    <button onclick="runDiscover()" style="background:#8b5cf6;color:#fff;border:none;padding:10px 20px;border-radius:6px;cursor:pointer">开始扫描</button>
-    <div id=discover-results></div>
-    <div class=modal-actions>
-      <button class=btn-cancel onclick="closeDiscover()">关闭</button>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button onclick="runDiscoverScored()" style="background:#8b5cf6;color:#fff;border:none;padding:10px 20px;border-radius:6px;cursor:pointer;font-size:.85em">🚀 智能评分</button>
+      <button onclick="runDiscover()" style="background:#2a2d3e;color:#ccc;border:1px solid #3a3d5e;padding:10px 20px;border-radius:6px;cursor:pointer;font-size:.85em">⚡ 快速扫描</button>
     </div>
+    <div id=discover-results></div>
+    <div class=modal-actions><button class=btn-cancel onclick="closeDiscover()">关闭</button></div>
   </div>
 </div>
 
@@ -225,9 +191,9 @@ tr:hover{background:#1a1d2e}
     <label>链名</label><input id=ae-chain>
     <label>代币</label><input id=ae-token>
     <label>标题</label><input id=ae-title>
-    <label>状态</label><select id=ae-status><option value=upcoming>即将到来</option><option value=live>进行中</option><option value=ended>已结束</option></select>
+    <label>状态</label><select id=ae-status><option value=upcoming>即将</option><option value=live>进行中</option><option value=ended>已结束</option></select>
     <label>预计日期</label><input type=date id=ae-date>
-    <label>预估价值($)</label><input type=number id=ae-value value=0>
+    <label>价值($)</label><input type=number id=ae-value value=0>
     <label>来源</label><input id=ae-source>
     <label>备注</label><textarea id=ae-notes rows=2></textarea>
     <div class=modal-actions>
@@ -241,16 +207,12 @@ tr:hover{background:#1a1d2e}
 
 <script>
 if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
-
-// API base — configurable via tap on the header (for phone PWA)
 const API = (window.API_BASE || 'http://127.0.0.1:8899') + '/api';
 let chains = [];
 let currentTab = "dashboard";
 
-// Init
 loadDashboard();
 
-// Tab switcher
 document.querySelectorAll("nav button").forEach(b => b.onclick = function() {
   document.querySelectorAll("nav button").forEach(x => x.classList.remove("active"));
   this.classList.add("active");
@@ -273,47 +235,25 @@ async function loadDashboard() {
     document.getElementById("stat-active").textContent = s.active;
     document.getElementById("stat-eligible").textContent = s.eligible;
     document.getElementById("stat-claimed").textContent = "$" + s.claimed;
-
-    // Cards
     const cards = document.getElementById("dash-cards");
     cards.innerHTML = `
       <div class=card><h3>📈 追踪链</h3><div class=big>${s.total}</div><div class=sub>已交互 ${s.active} 条</div></div>
       <div class=card><h3>🎁 空投信号</h3><div class=big>${s.pending_airdrop||0}</div><div class=sub>待发币 / 未检查</div></div>
       <div class=card><h3>✅ 有资格</h3><div class=big>${s.eligible}</div><div class=sub>已确认空投资格</div></div>
-      <div class=card><h3>💰 已领取</h3><div class=big>$${s.claimed.toLocaleString()}</div><div class=sub>累计空投收益</div></div>
-    `;
-
-    // Recent chains
+      <div class=card><h3>💰 已领取</h3><div class=big>$${s.claimed.toLocaleString()}</div><div class=sub>累计空投收益</div></div>`;
     const recent = document.getElementById("dash-recent");
     if (d.recent && d.recent.length) {
-      recent.innerHTML = d.recent.map(c => `
-        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #1f2233;font-size:.85em">
-          <span><b>${esc(c.name)}</b> <span style=color:#888>${c.token||''}</span></span>
-          <span>${tgeBadge(c.tge_status)}</span>
-        </div>`).join("");
+      recent.innerHTML = d.recent.map(c => `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #1f2233;font-size:.85em"><span><b>${esc(c.name)}</b> <span style=color:#888>${c.token||''}</span></span><span>${tgeBadge(c.tge_status)}</span></div>`).join("");
     } else recent.innerHTML = '<p style=color:#666>暂无追踪链</p>';
-
-    // Top TVL
     const toptvl = document.getElementById("dash-toptvl");
     if (d.top_tvl && d.top_tvl.length) {
-      toptvl.innerHTML = d.top_tvl.map(c => `
-        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #1f2233;font-size:.85em">
-          <span><b>${esc(c.name)}</b> <span style=color:#888>${c.token||''}</span></span>
-          <span style=color:#22c55e>$${(c.tvl||0).toLocaleString()}</span>
-        </div>`).join("");
-    } else toptvl.innerHTML = '<p style=color:#666>暂无 TVL 数据</p>';
-
-    // Price ticker in dashboard
+      toptvl.innerHTML = d.top_tvl.map(c => `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #1f2233;font-size:.85em"><span><b>${esc(c.name)}</b> <span style=color:#888>${c.token||''}</span></span><span style=color:#22c55e>$${(c.tvl||0).toLocaleString()}</span></div>`).join("");
+    } else toptvl.innerHTML = '<p style=color:#666>暂无数据</p>';
     if (d.prices && d.prices.length) {
-      const priceDiv = document.createElement("div");
-      priceDiv.className = "card";
-      priceDiv.style.marginTop = "14px";
-      priceDiv.innerHTML = `<h3>💹 代币价格</h3>${d.prices.map(p => `
-        <div class=price-item>
-          <span><b>${esc(p.token)}</b></span>
-          <span>$${(p.price_usd||0).toFixed(4)} <span class="${p.change_24h>=0?'price-up':'price-down'}">${p.change_24h>=0?'+':''}${(p.change_24h||0).toFixed(2)}%</span></span>
-        </div>`).join("")}`;
-      cards.appendChild(priceDiv);
+      const pd = document.createElement("div");
+      pd.className = "card"; pd.style.marginTop = "14px";
+      pd.innerHTML = `<h3>💹 代币价格</h3>${d.prices.map(p => `<div class=price-item><span><b>${esc(p.token)}</b></span><span>$${(p.price_usd||0).toFixed(4)} <span class="${p.change_24h>=0?'price-up':'price-down'}">${p.change_24h>=0?'+':''}${(p.change_24h||0).toFixed(2)}%</span></span></div>`).join("")}`;
+      cards.appendChild(pd);
     }
   } catch(e) { console.error(e); }
 }
@@ -325,7 +265,6 @@ async function loadChains() {
   chains = await res.json();
   renderChains();
 }
-
 function renderChains() {
   const filter = document.getElementById("filter-status").value;
   const search = document.getElementById("search").value.toLowerCase();
@@ -334,93 +273,55 @@ function renderChains() {
   if (filter === "active") filtered = filtered.filter(c => c.swaps > 0);
   if (filter === "done") filtered = filtered.filter(c => c.status === "done");
   if (search) filtered = filtered.filter(c => c.name.toLowerCase().includes(search));
-
-  const tbody = document.querySelector("#chain-table tbody");
-  tbody.innerHTML = filtered.map(c => `
-    <tr>
-      <td><strong>${esc(c.name)}</strong></td>
-      <td>${c.chain_id||"-"}</td>
-      <td>${c.token||"-"}</td>
-      <td>${c.swaps}</td><td>${c.lp_added}</td><td>${c.bridges}</td><td>${c.nfts}</td><td>${c.contracts}</td>
-      <td>${tgeBadge(c.tge_status)}</td>
-      <td>${eligibleBadge(c.airdrop_eligible)}</td>
-      <td>${c.claimed_amount ? "$"+c.claimed_amount : "-"}</td>
-      <td><button onclick="editChain(${c.id})" style="background:#2a2d3e;color:#ccc;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:.78em">编辑</button></td>
-    </tr>
-  `).join("");
+  document.querySelector("#chain-table tbody").innerHTML = filtered.map(c => `
+    <tr><td><strong>${esc(c.name)}</strong></td><td>${c.chain_id||"-"}</td><td>${c.token||"-"}</td>
+    <td>${c.swaps}</td><td>${c.lp_added}</td><td>${c.bridges}</td><td>${c.nfts}</td><td>${c.contracts}</td>
+    <td>${tgeBadge(c.tge_status)}</td><td>${eligibleBadge(c.airdrop_eligible)}</td><td>${c.claimed_amount?"$"+c.claimed_amount:"-"}</td>
+    <td><button onclick="editChain(${c.id})" style="background:#2a2d3e;color:#ccc;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:.78em">编辑</button></td></tr>`).join("");
 }
-
-function esc(s) { return (s||"").replace(/</g,"&lt;") }
+function esc(s) { return (s||"").replace(/</g,"&lt;"); }
 function tgeBadge(s) {
   if (s==="live") return '<span class="badge badge-tge">已发币</span>';
   if (s==="airdrop") return '<span class="badge badge-claimed">已空投</span>';
   if (s==="pending") return '<span class="badge badge-active">待发币</span>';
   return '<span style="color:#666">未知</span>';
 }
-function eligibleBadge(s) {
-  if (s===1) return '<span class="badge badge-eligible">有</span>';
-  if (s===0) return '<span class="badge badge-done">无</span>';
-  return '<span style="color:#666">-</span>';
-}
-function filterChains() { renderChains() }
+function eligibleBadge(s) { if(s===1)return'<span class="badge badge-eligible">有</span>';if(s===0)return'<span class="badge badge-done">无</span>';return'<span style="color:#666">-</span>'; }
+function filterChains() { renderChains(); }
 
 // ===== Airdrops =====
 async function loadAirdrops() {
-  // Potential airdrops
   try {
     const res = await fetch(API + "/airdrops");
     const data = await res.json();
     const list = document.getElementById("airdrop-list");
     if (data.length) {
       list.innerHTML = data.map(a => `
-        <div class=airdrop-card>
-          <div>
-            <div class=name>${esc(a.name)} ${a.token?'<span style=color:#888>('+esc(a.token)+')</span>':''}</div>
-            <div class=info>TVL: $${(a.tvl||0).toLocaleString()} | 交互: ${a.interactions} 次 | ${a.tge_status==='pending'?'待发币':'未发币'}</div>
-          </div>
-          <span class="potential badge-${a.potential}">${a.potential==='high'?'🔥 高潜力':a.potential==='medium'?'🟡 中等':'⚪ 低'}</span>
-        </div>`).join("");
-    } else {
-      list.innerHTML = '<p style=color:#666>暂无空投信号。添加链后自动评估。</p>';
-    }
+        <div class=airdrop-card><div>
+          <div class=name>${esc(a.name)} ${a.token?'<span style=color:#888>('+esc(a.token)+')</span>':''}</div>
+          <div class=info>TVL: $${(a.tvl||0).toLocaleString()} | 交互: ${a.interactions}次 | ${a.tge_status==='pending'?'待发币':'未发币'}</div></div>
+          <span class="potential badge-${a.potential}">${a.potential==='high'?'🔥 高潜力':a.potential==='medium'?'🟡 中等':'⚪ 低'}</span></div>`).join("");
+    } else list.innerHTML = '<p style=color:#666>暂无空投信号</p>';
   } catch(e) { console.error(e); }
-
-  // Events
   try {
     const res = await fetch(API + "/airdrops/events");
     const events = await res.json();
     const el = document.getElementById("airdrop-events");
     if (events.length) {
-      el.innerHTML = events.map(e => `
-        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #1f2233;font-size:.82em">
-          <span><b>${esc(e.chain_name)}</b> ${e.token?'('+esc(e.token)+')':''} — ${esc(e.title||'')}</span>
-          <span>${e.status==='live'?'<span class="badge badge-active">进行中</span>':e.status==='ended'?'<span class="badge badge-done">已结束</span>':'<span class="badge badge-tge">即将</span>'} ${e.value_usd>0?'$'+e.value_usd:''}</span>
-        </div>`).join("");
-    } else {
-      el.innerHTML = '<p style=color:#666>暂无空投事件记录</p>';
-    }
+      el.innerHTML = events.map(e => `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #1f2233;font-size:.82em"><span><b>${esc(e.chain_name)}</b> ${e.token?'('+esc(e.token)+')':''} — ${esc(e.title||'')}</span><span>${e.status==='live'?'<span class="badge badge-active">进行中</span>':e.status==='ended'?'<span class="badge badge-done">已结束</span>':'<span class="badge badge-tge">即将</span>'} ${e.value_usd>0?'$'+e.value_usd:''}</span></div>`).join("");
+    } else el.innerHTML = '<p style=color:#666>暂无空投事件</p>';
   } catch(e) { console.error(e); }
 }
-
-function openAddAirdropEvent() {
-  document.getElementById("airdrop-event-modal").classList.add("active");
-}
-function closeAirdropEventModal() { document.getElementById("airdrop-event-modal").classList.remove("active") }
+function openAddAirdropEvent() { document.getElementById("airdrop-event-modal").classList.add("active"); }
+function closeAirdropEventModal() { document.getElementById("airdrop-event-modal").classList.remove("active"); }
 async function saveAirdropEvent() {
-  const data = {
-    chain_name: document.getElementById("ae-chain").value,
-    token: document.getElementById("ae-token").value,
-    title: document.getElementById("ae-title").value,
-    status: document.getElementById("ae-status").value,
-    estimated_date: document.getElementById("ae-date").value,
-    value_usd: parseFloat(document.getElementById("ae-value").value)||0,
-    source: document.getElementById("ae-source").value,
-    notes: document.getElementById("ae-notes").value,
-  };
-  await fetch(API + "/airdrops/events", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(data) });
-  closeAirdropEventModal();
-  loadAirdrops();
-  toast("空投事件已添加");
+  await fetch(API + "/airdrops/events", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({
+    chain_name: document.getElementById("ae-chain").value, token: document.getElementById("ae-token").value,
+    title: document.getElementById("ae-title").value, status: document.getElementById("ae-status").value,
+    estimated_date: document.getElementById("ae-date").value, value_usd: parseFloat(document.getElementById("ae-value").value)||0,
+    source: document.getElementById("ae-source").value, notes: document.getElementById("ae-notes").value
+  })});
+  closeAirdropEventModal(); loadAirdrops(); toast("已添加");
 }
 
 // ===== Prices =====
@@ -430,143 +331,123 @@ async function loadPrices() {
     const res = await fetch(API + "/prices");
     const data = await res.json();
     if (data.length) {
-      el.innerHTML = data.map(p => `
-        <div class=card style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-          <div>
-            <div style=font-weight:700;font-size:1.1em>${esc(p.token)}</div>
-            <div style=color:#888;font-size:.75em>更新: ${(p.updated_at||'').replace('T',' ')}</div>
-          </div>
-          <div style=text-align:right>
-            <div style=font-size:1.3em;font-weight:700>$${(p.price_usd||0).toFixed(6)}</div>
-            <div class="${p.change_24h>=0?'price-up':'price-down'}" style=font-size:.85em>${p.change_24h>=0?'+':''}${(p.change_24h||0).toFixed(2)}%</div>
-          </div>
-        </div>`).join("");
-    } else {
-      el.innerHTML = '<p style=color:#666>暂无价格数据。追踪有代币的链后自动获取 CoinGecko 价格。</p>';
-    }
-  } catch(e) { el.innerHTML = '<p style=color:#ef4444>加载价格失败</p>'; }
+      el.innerHTML = data.map(p => `<div class=card style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div><div style=font-weight:700;font-size:1.1em>${esc(p.token)}</div><div style=color:#888;font-size:.75em>${(p.updated_at||'').replace('T',' ')}</div></div><div style=text-align:right><div style=font-size:1.3em;font-weight:700>$${(p.price_usd||0).toFixed(6)}</div><div class="${p.change_24h>=0?'price-up':'price-down'}" style=font-size:.85em>${p.change_24h>=0?'+':''}${(p.change_24h||0).toFixed(2)}%</div></div></div>`).join("");
+    } else el.innerHTML = '<p style=color:#666>暂无价格。追踪有代币的链后自动获取 CoinGecko 价格。</p>';
+  } catch(e) { el.innerHTML = '<p style=color:#ef4444>加载失败</p>'; }
 }
-async function refreshPrices() {
-  await fetch(API + "/prices/refresh", { method:"POST" });
-  loadPrices();
-  toast("价格已刷新");
-}
+async function refreshPrices() { await fetch(API + "/prices/refresh", { method:"POST" }); loadPrices(); toast("已刷新"); }
 
 // ===== Chain CRUD =====
 function openAddChain() {
   document.getElementById("edit-title").textContent = "添加新链";
   ["edit-id","edit-name","edit-chainid","edit-token","edit-rpc","edit-explorer","edit-wallet","edit-notes"].forEach(id => document.getElementById(id).value = "");
   ["edit-swaps","edit-lp","edit-bridges","edit-nfts","edit-contracts","edit-claimed"].forEach(id => document.getElementById(id).value = 0);
-  document.getElementById("edit-tge").value = "unknown";
-  document.getElementById("edit-eligible").value = -1;
-  document.getElementById("btn-delete").style.display = "none";
-  document.getElementById("edit-modal").classList.add("active");
+  document.getElementById("edit-tge").value = "unknown"; document.getElementById("edit-eligible").value = -1;
+  document.getElementById("btn-delete").style.display = "none"; document.getElementById("edit-modal").classList.add("active");
 }
 function editChain(id) {
-  const c = chains.find(x => x.id === id);
-  if (!c) return;
+  const c = chains.find(x => x.id === id); if (!c) return;
   document.getElementById("edit-title").textContent = "编辑: " + c.name;
-  document.getElementById("edit-id").value = c.id;
-  document.getElementById("edit-name").value = c.name;
-  document.getElementById("edit-chainid").value = c.chain_id||"";
-  document.getElementById("edit-token").value = c.token||"";
-  document.getElementById("edit-rpc").value = c.rpc_url||"";
-  document.getElementById("edit-explorer").value = c.explorer||"";
+  document.getElementById("edit-id").value = c.id; document.getElementById("edit-name").value = c.name;
+  document.getElementById("edit-chainid").value = c.chain_id||""; document.getElementById("edit-token").value = c.token||"";
+  document.getElementById("edit-rpc").value = c.rpc_url||""; document.getElementById("edit-explorer").value = c.explorer||"";
   document.getElementById("edit-wallet").value = c.wallet||"";
-  document.getElementById("edit-swaps").value = c.swaps||0;
-  document.getElementById("edit-lp").value = c.lp_added||0;
-  document.getElementById("edit-bridges").value = c.bridges||0;
-  document.getElementById("edit-nfts").value = c.nfts||0;
-  document.getElementById("edit-contracts").value = c.contracts||0;
-  document.getElementById("edit-tge").value = c.tge_status||"unknown";
-  document.getElementById("edit-eligible").value = c.airdrop_eligible;
-  document.getElementById("edit-claimed").value = c.claimed_amount||0;
-  document.getElementById("edit-notes").value = c.notes||"";
-  document.getElementById("btn-delete").style.display = "inline-block";
+  document.getElementById("edit-swaps").value = c.swaps||0; document.getElementById("edit-lp").value = c.lp_added||0;
+  document.getElementById("edit-bridges").value = c.bridges||0; document.getElementById("edit-nfts").value = c.nfts||0;
+  document.getElementById("edit-contracts").value = c.contracts||0; document.getElementById("edit-tge").value = c.tge_status||"unknown";
+  document.getElementById("edit-eligible").value = c.airdrop_eligible; document.getElementById("edit-claimed").value = c.claimed_amount||0;
+  document.getElementById("edit-notes").value = c.notes||""; document.getElementById("btn-delete").style.display = "inline-block";
   document.getElementById("edit-modal").classList.add("active");
 }
-function closeModal() { document.getElementById("edit-modal").classList.remove("active") }
+function closeModal() { document.getElementById("edit-modal").classList.remove("active"); }
 async function saveChain() {
   const id = document.getElementById("edit-id").value;
   const data = {
-    id: id ? parseInt(id) : undefined,
-    name: document.getElementById("edit-name").value,
-    chain_id: document.getElementById("edit-chainid").value,
-    token: document.getElementById("edit-token").value,
-    rpc_url: document.getElementById("edit-rpc").value,
-    explorer: document.getElementById("edit-explorer").value,
+    id: id ? parseInt(id) : undefined, name: document.getElementById("edit-name").value,
+    chain_id: document.getElementById("edit-chainid").value, token: document.getElementById("edit-token").value,
+    rpc_url: document.getElementById("edit-rpc").value, explorer: document.getElementById("edit-explorer").value,
     wallet: document.getElementById("edit-wallet").value,
-    swaps: parseInt(document.getElementById("edit-swaps").value)||0,
-    lp_added: parseInt(document.getElementById("edit-lp").value)||0,
-    bridges: parseInt(document.getElementById("edit-bridges").value)||0,
-    nfts: parseInt(document.getElementById("edit-nfts").value)||0,
-    contracts: parseInt(document.getElementById("edit-contracts").value)||0,
-    tge_status: document.getElementById("edit-tge").value,
-    airdrop_eligible: parseInt(document.getElementById("edit-eligible").value),
-    claimed_amount: parseFloat(document.getElementById("edit-claimed").value)||0,
-    notes: document.getElementById("edit-notes").value,
+    swaps: parseInt(document.getElementById("edit-swaps").value)||0, lp_added: parseInt(document.getElementById("edit-lp").value)||0,
+    bridges: parseInt(document.getElementById("edit-bridges").value)||0, nfts: parseInt(document.getElementById("edit-nfts").value)||0,
+    contracts: parseInt(document.getElementById("edit-contracts").value)||0, tge_status: document.getElementById("edit-tge").value,
+    airdrop_eligible: parseInt(document.getElementById("edit-eligible").value), claimed_amount: parseFloat(document.getElementById("edit-claimed").value)||0,
+    notes: document.getElementById("edit-notes").value
   };
-  const url = id ? API + "/chains/update" : API + "/chains";
-  await fetch(url, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(data) });
-  closeModal();
-  loadChains();
-  loadDashboard();
-  toast(id ? "已更新" : "已添加");
+  await fetch(id ? API + "/chains/update" : API + "/chains", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(data) });
+  closeModal(); loadChains(); loadDashboard(); toast(id ? "已更新" : "已添加");
 }
 async function deleteChain() {
-  const id = document.getElementById("edit-id").value;
-  if (!confirm("确定删除?")) return;
+  const id = document.getElementById("edit-id").value; if (!confirm("确定删除?")) return;
   await fetch(API + "/chains/delete", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({id:parseInt(id)}) });
-  closeModal();
-  loadChains();
-  loadDashboard();
-  toast("已删除");
+  closeModal(); loadChains(); loadDashboard(); toast("已删除");
 }
 
 // ===== Discover =====
 function openDiscover() {
   document.getElementById("discover-modal").classList.add("active");
-  document.getElementById("discover-results").innerHTML = '<p style="color:#888">点击"开始扫描"从 DefiLlama 获取新链</p>';
+  document.getElementById("discover-results").innerHTML = '<p style=color:#888>点击"智能评分"进行综合评估，或"快速扫描"看全部</p>';
 }
-function closeDiscover() { document.getElementById("discover-modal").classList.remove("active") }
-async function runDiscover() {
-  const el = document.getElementById("discover-results");
-  el.innerHTML = '<p>扫描中...</p>';
-  const res = await fetch(API + "/discover");
-  const data = await res.json();
-  if (data.error) { el.innerHTML = `<p style="color:#ef4444">错误: ${data.error}</p>`; return }
-  const candidates = data.candidates.slice(0, 50);
-  el.innerHTML = `<p style="margin-bottom:8px">扫描 <b>${data.total_scanned}</b> 条链，发现 <b>${candidates.length}</b> 候选 (来源: ${data.source})</p>` +
-    candidates.map(c => `
-      <div class=candidate>
-        <span><b>${esc(c.name)}</b> (TVL: $${(c.tvl||0).toLocaleString()}) ${c.token?"| "+esc(c.token):""}</span>
-        <button onclick="addCandidate('${esc(c.name)}','${c.chain_id||""}','${c.token||""}')" style="background:#22c55e;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:.75em">+追踪</button>
-      </div>`).join("");
-}
-async function addCandidate(name, chainId, token) {
-  await fetch(API + "/chains", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({name, chain_id:chainId, token}) });
-  loadChains();
-  loadDashboard();
+function closeDiscover() { document.getElementById("discover-modal").classList.remove("active"); }
+
+async function runDiscoverScored() {
+  const el = document.getElementById("discover-results"); el.innerHTML = '<p>评分分析中...</p>';
+  try {
+    const res = await fetch(API + "/discover/scored");
+    const data = await res.json();
+    if (data.error) { el.innerHTML = `<p style=color:#ef4444>错误: ${data.error}</p>`; return; }
+    const candidates = (data.candidates||[]).slice(0, 40);
+    const rc = data.rating_counts || {};
+    const summary = `<div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+      <span style="background:#22c55e;color:#fff;padding:3px 10px;border-radius:10px;font-size:.78em;font-weight:700">S级 ${rc.S||0}</span>
+      <span style="background:#3b82f6;color:#fff;padding:3px 10px;border-radius:10px;font-size:.78em;font-weight:700">A级 ${rc.A||0}</span>
+      <span style="background:#f59e0b;color:#000;padding:3px 10px;border-radius:10px;font-size:.78em;font-weight:700">B级 ${rc.B||0}</span>
+      <span style="background:#6b7280;color:#fff;padding:3px 10px;border-radius:10px;font-size:.78em;font-weight:700">C级 ${rc.C||0}</span></div>`;
+    el.innerHTML = `<p style=margin-bottom:6px>扫描 <b>${data.total_scanned}</b> 条链，精选 <b>${candidates.length}</b> | ${data.source}</p>` + summary +
+      candidates.map(c => {
+        const rc = c.rating==='S'?'#22c55e':c.rating==='A'?'#3b82f6':c.rating==='B'?'#f59e0b':'#6b7280';
+        return `<div class=scored-row>
+          <div style=flex:1;min-width:180px>
+            <b>${esc(c.name)}</b> <span style=color:#888;font-size:.8em>$${(c.tvl||0).toLocaleString()}</span>
+            ${c.token?`<span style=color:#22c55e;font-size:.75em>|${esc(c.token)}</span>`:''}
+            ${c.protocols?`<span style=color:#888;font-size:.7em>|${c.protocols}协议</span>`:''}
+            ${c.change_7d?`<span style=color:${c.change_7d>0?'#22c55e':'#ef4444'};font-size:.7em>|${c.change_7d>0?'+':''}${c.change_7d.toFixed(1)}%</span>`:''}</div>
+          <div style=display:flex;align-items:center;gap:6px>
+            <span style=background:${rc};color:#fff;padding:2px 8px;border-radius:8px;font-size:.72em;font-weight:700>${c.rating} ${c.score}</span>
+            <span style=color:#888;font-size:.65em;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap title="${(c.details||[]).join(', ')}">${(c.details||[]).slice(0,2).join('·')}</span>
+            <button onclick="addCandidate('${esc(c.name)}','${c.chain_id||\"\"}','${c.token||\"\"}')" style=background:#22c55e;color:#fff;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:.68em;white-space:nowrap>+追踪</button></div></div>`;
+      }).join("");
+  } catch(e) { el.innerHTML = `<p style=color:#ef4444>扫描失败: ${e}</p>`; }
 }
 
-function exportCSV() { window.open(API + "/export") }
+async function runDiscover() {
+  const el = document.getElementById("discover-results"); el.innerHTML = '<p>扫描中...</p>';
+  try {
+    const res = await fetch(API + "/discover");
+    const data = await res.json();
+    if (data.error) { el.innerHTML = `<p style=color:#ef4444>错误: ${data.error}</p>`; return; }
+    const candidates = (data.candidates||[]).slice(0, 50);
+    el.innerHTML = `<p style=margin-bottom:6px>扫描 <b>${data.total_scanned}</b> 条链，发现 <b>${candidates.length}</b> 候选 | ${data.source}</p>` +
+      candidates.map(c => `<div class=scored-row><span><b>${esc(c.name)}</b> (TVL: $${(c.tvl||0).toLocaleString()}) ${c.token?"| "+esc(c.token):""}</span><button onclick="addCandidate('${esc(c.name)}','${c.chain_id||\"\"}','${c.token||\"\"}')" style=background:#22c55e;color:#fff;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:.7em;white-space:nowrap>+追踪</button></div>`).join("");
+  } catch(e) { el.innerHTML = `<p style=color:#ef4444>扫描失败</p>`; }
+}
+
+async function addCandidate(name, chainId, token) {
+  await fetch(API + "/chains", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({name, chain_id:chainId, token}) });
+  loadChains(); loadDashboard();
+}
+function exportCSV() { window.open(API + "/export"); }
 
 // ===== Toast =====
 function toast(msg) {
-  const t = document.getElementById("toast");
-  t.textContent = msg;
-  t.classList.add("show");
-  setTimeout(() => t.classList.remove("show"), 2500);
+  const t = document.getElementById("toast"); t.textContent = msg; t.classList.add("show"); setTimeout(() => t.classList.remove("show"), 2500);
 }
 
-// Tap header 5 times to configure server IP (for phone PWA / APK)
+// Tap header 5 times for phone IP config
 let tapCount = 0;
 document.querySelector('header h1').onclick = () => {
-  tapCount++;
-  if (tapCount >= 5) {
+  tapCount++; if (tapCount >= 5) {
     const ip = prompt('服务器 IP:端口', API.replace('/api','').replace('http://',''));
-    if (ip) { window.API_BASE = 'http://' + ip; location.reload(); }
-    tapCount = 0;
+    if (ip) { window.API_BASE = 'http://' + ip; location.reload(); } tapCount = 0;
   }
   setTimeout(() => tapCount = 0, 2000);
 };
