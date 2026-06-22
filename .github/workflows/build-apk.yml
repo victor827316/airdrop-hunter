@@ -23,15 +23,17 @@ jobs:
           node-version: '22'
 
       - name: Install Capacitor deps
-        run: |
-          npm install
-          npm install @capacitor/android @capacitor/core @capacitor/cli
+        run: npm install
 
       - name: Build web assets
         run: npx cap sync android
 
       - name: Build APK
-        run: cd android && ./gradlew assembleDebug --no-daemon
+        run: |
+          export ANDROID_HOME=/usr/local/lib/android/sdk
+          export ANDROID_SDK_ROOT=/usr/local/lib/android/sdk
+          chmod +x android/gradlew
+          cd android && ./gradlew assembleDebug --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

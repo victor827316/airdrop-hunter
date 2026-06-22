@@ -8,6 +8,13 @@ import json, os, datetime, sqlite3, urllib.request, threading, time
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 
+# PyInstaller bundle path
+import sys
+if getattr(sys, 'frozen', False):
+    BUNDLE_DIR = sys._MEIPASS
+else:
+    BUNDLE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 HOME = os.path.expanduser("~")
 DATA_DIR = os.path.join(HOME, ".airdrop_tracker")
 DB_PATH = os.path.join(DATA_DIR, "airdrop_hunter.db")
@@ -98,7 +105,7 @@ class APIHandler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
 
         # Serve static files for PWA
-        STATIC = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'frontend')
+        STATIC = os.path.join(BUNDLE_DIR, 'frontend')
         if path == '/' or path == '':
             path = '/index.html'
         if path in ('/index.html', '/manifest.json', '/sw.js', '/icon-192.png', '/icon-512.png'):
